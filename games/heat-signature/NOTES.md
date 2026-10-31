@@ -688,7 +688,15 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
 - **Test tooling**: suite check 7 counted a hit on the guest as an injury; with more gunfire since the gear change the
   guest was already knocked out (`Unconscious`, no more injuries counted), so the check now also accepts the hit
   arriving at a knocked-out guest.
-- **Not done**: items dropped or thrown by a player, loot boxes, what a puppet holds; the pickups are tested with the
+- **Loot boxes** (observed): `oLootBox_Step_0` (`0x00f03740`) opens a box when `Activate` (0x377) is set: `Open` (0x438),
+  then `MyLoot` (0xb96, 0 before) = `CreateRandomItemOfRarity`, put on top of the box, then `ShowInventoryMenu`
+  (`0x009372e0`) for the opener, all in one step. Both copies opening the same box in the same step with the same random
+  state (hash of the 72-byte state identical) made different items (e.g. "Long Range Glitch Trap" and "Silenced
+  Quickfire Gun"), so the item pool depends on more than the random numbers (per-player unlocks: a guess, unverified).
+  Sync: a box that opens here is sent; the other copy sets `Activate` on the same box, lets it open with
+  `ShowInventoryMenu` dropped, and removes the item it made (`DestroyContents`): the item is the opener's only.
+  Observed: 3 runs, the host opened the guest's box, no menu, no item on the host's box, the guest took its item.
+- **Not done**: items dropped or thrown by a player, the box's item for both players, keyed boxes, what a puppet holds; the pickups are tested with the
   test helper `takeitem`, which calls `AddToInventory` (or sends and removes loot as `CollectLoot` would), not by walking.
 
 ## Unknown
