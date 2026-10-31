@@ -696,8 +696,44 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   Sync: a box that opens here is sent; the other copy sets `Activate` on the same box, lets it open with
   `ShowInventoryMenu` dropped, and removes the item it made (`DestroyContents`): the item is the opener's only.
   Observed: 3 runs, the host opened the guest's box, no menu, no item on the host's box, the guest took its item.
-- **Not done**: items dropped or thrown by a player, the box's item for both players, keyed boxes, what a puppet holds; the pickups are tested with the
+- **Not done**: the box's item for both players, keyed boxes, what a puppet holds; the pickups are tested with the
   test helper `takeitem`, which calls `AddToInventory` (or sends and removes loot as `CollectLoot` would), not by walking.
+
+## Items dropped and thrown (2026-10-31)
+
+- **Where** (decompiled): `DropInventoryItem`, `DropTrap` and `ThrowInventoryItem` (`0x008cafb0`) all call
+  `EjectFromInventory` (`0x0088bf00`, self = the person, argument = the item id): the item leaves the owner's inventory
+  and is put aboard the owner's ship at the owner's feet; a throw then sets `ForeSpeed` (0x37d) and `StarboardSpeed`
+  (0x380). Aboard a ship things move ship-wise; `HorizontalSpeed`/`VerticalSpeed` (0x54f/0x550) are not speeds there
+  (observed: 4287, -11207 on a dropped item at rest). The throw's direction comes from the thrower, not from the target
+  arguments (observed: three targets in different directions, same direction each time); unknown which variable.
+- **Item variables** (observed): items have no flat `yyvars` array; their variables live in a hash map at instance
+  `+0x60` (the runtime's `GetYYVarRef`, `0x010b6960`: capacity at `+0`, elements at `+0x10`, 12 bytes each
+  `{slot, RValue *, hash}`, hash 0 = empty). A Sidewinder had 157 set: 128 numbers, 24 texts (`Name`, `BaseName`,
+  `Grade`, `ChecksumString`...), 3 lists (`0x298` = the trait names, read by `DrawDescriptionAndTraitsForItem`;
+  `TraitTypes`, `TraitChances`) and 2 instance ids (`Parent`, `UseHandle`). A list is `{refs, row array, owner, visited,
+  rows}`, a row `{length, RValue *}`.
+- **Instances by id** (disassembly of `0x01098ea0`): buckets at `[0x048df1b0]`, mask at `[0x048df1b4]`, 8 bytes per
+  bucket, nodes `{?, next, id, instance}`.
+- **Sync**: when my player's item lands on the shared ship, the next frame (after a throw has set its speed) the core
+  sends every variable set to a number, text or one-row list, except the place, `Parent`, `Owner`, `DestroyMe` and any
+  value that looks like an instance id (an integer from 100000 to 2e7); about 2 KB. The other copy creates the object
+  there (`CreateInstance`, then into the ship's contents) and sets them. A thrown item is watched until it has been
+  still for 20 frames (a bounce off a guard stopped one for a frame and it moved on: 5 units apart on the first try);
+  then its resting place is sent and the copy is put there. A shown item in flight does not impact anyone: the game calls
+  `InventoryItemImpactsObject` (`0x00894e30`, which can call `SetDamageSignal` and distract guards with the bounce sound)
+  from the item's step for each nearby person; for a shown item in flight it is dropped, so the thrower's copy alone
+  decides a hit (a guest's hit already reaches the host).
+- **Matching**: a taken item is looked up by object and place; the tolerance went from 3 to 24 units for thrown items.
+- **Event numbers** for taken items, boxes and drops now start from the clock: after a hot reload of the sender's core
+  they started again at 1 and the receiver ignored them as already seen.
+- **Observed** (items scenario): a Grenade Launcher the guest dropped appeared on the host with the same name and the
+  same 171 variables; the host took it (gone on the guest), threw it 32 units; both copies had it at the same place; the
+  guest took it back under the same name.
+- **Not done**: a thrown item's hit on a guard is not tested (no throw in the tests did damage, so the `ghostimpacts`
+  switch has no check that can fail); a guest's thrown item does not distract the host's guards (its bounce sound plays
+  only on the guest's copy); armed traps not tested (`Armed` is copied, so a shown trap may go off on both copies: unknown); an item that leaves
+  the shared ship (thrown out of an airlock) is not followed; items dropped in space or on another ship.
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.

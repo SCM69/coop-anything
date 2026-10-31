@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 27-check suite, a 10-check mission scenario and a 9-check security scenario on two real game copies (host + 1 guest), with 22 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 27-check suite, a 10-check mission scenario, a 9-check security scenario and a 7-check items scenario on two real game copies (host + 1 guest), with 23 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-31 |
 
 ## Where things stand
@@ -22,8 +22,9 @@ witnesses and other mission stats are counted for the right player; bullets fire
 copies (the other copy's are harmless look-alikes; hits travel separately); after an alarm, reinforcements and their
 jammer devices are the same on both copies; guards carry the same gear and drop the same items, and an item or loot
 taken off the ship on one copy is gone on the other; a loot box opened on one copy opens on the other (its item is the
-opener's); alarms, the target's death or escape and the
-mission's end are the same on both copies. Not done: grenades and hull damage on both copies, loot, other mission types, guard
+opener's); an item a player drops or throws aboard is the same item on the other copy (name, traits, every value) and
+rests at the same place; alarms, the target's death or escape and the
+mission's end are the same on both copies. Not done: grenades and hull damage on both copies, a thrown item's hit on a guard (untested), other mission types, guard
 animations on guests, more than one guest, Steam lobbies, an installer.
 
 ## Existing work
@@ -87,6 +88,12 @@ are gone on the host too, a loot box the guest opens opens on the host too (no i
 the guest's copy only, and the guest takes it), no `FailMission` on either, no error dialogs, both advancing. It uses another draw of the
 guards' gear (`GEAR_SALT=1`): with the default one this ship's target has a shield, which stops the guest's punch.
 
+`tools/items.sh` (7 checks): dock; the guest drops its last item and the host shows the same object at the same
+place with the same name and the same variables (count, texts, lists, numbers; references to other objects are not
+copied); the host takes it (gone on the guest, in the host's inventory under the same name); the host throws it and,
+once it has stopped, both copies have it at the same place (at most 2 units apart, moved at least 5); the guest takes it
+back (gone on the host); no error dialogs; both advancing.
+
 `tools/security.sh` (9 checks) raises the alarm on a ship with reinforcements. The random test galaxy may offer
 none, so the shared mission's text gets `ReinforcementProtocol = 2` and `EscapeProtocol = 0` on both copies (test
 helper `MISSION_SET`). Checks: dock; the protocol on both copies; the guest beams in exactly the host's reinforcements;
@@ -94,7 +101,12 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs (2026-10-31, final build): suite **27/27 four times in a row** (20:26-20:34 UTC); mission scenario **10/10
+Last runs on the drops build (2026-10-31): items **7/7 three times in a row** (23:07, 23:09, 23:10 UTC); suite 27/27
+(22:58), mission 10/10 (22:59), security 9/9 (23:02). Earlier items runs failed on the test's own bars: two throws hit
+something after 13-15 units (the check wanted 20; both copies agreed), and one item held a value that looked like an
+instance id on one copy only (now counted with the numbers).
+
+Earlier runs (2026-10-31, the loot box build): suite **27/27 four times in a row** (20:26-20:34 UTC); mission scenario **10/10
 three times in a row** (21:03, 21:04, 21:06); suite 27/27 and security 9/9 again on that build (21:10, 21:12); security scenario 9/9 (20:04; three in a row at 18:39-19:00 on the build
 before the gear change). Earlier suite runs on this build failed once each: the host's guards raised the alarm during
 the sentry walk (exposure since cut from 3 s to 1 s), and once one hit on the guest came from its own copy (not seen
@@ -126,6 +138,7 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `nogearseed` (gear not seeded), mission scenario | 7 passed, 2 failed | the target's drops differ (4 lines); a taken item not found on the host |
 | `notaken` (taking not sent), mission scenario | 8 passed, 1 failed | guest sent 0; host contents 77, guest 75 |
 | `noboxes` (box openings not synced), mission scenario | 9 passed, 1 failed | the host's copy opened 0 boxes for the guest |
+| `nodrops` (drops and throws not sent), items scenario | 4 passed, 3 failed | the host shows nothing where the guest dropped its item |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 
@@ -143,6 +156,6 @@ Not applicable yet.
 ## Next steps
 
 - Grenades, explosions and hull damage on every copy; other mission types and docking home; spotted pause/zoom on the
-  spotted player's screen; guard states and animations on guests; loot.
+  spotted player's screen; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.
