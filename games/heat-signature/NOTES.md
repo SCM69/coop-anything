@@ -851,3 +851,25 @@ Observed, unless marked:
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.
+
+## Knocked out: what the game does, and what co-op did (2026-11-01)
+
+Observed, unless marked:
+- **Unmodded flow, on the host (its copy runs the guards)**: with the target already dead (`hitguard -2 1`, so no escape
+  could end the mission), the host walked into the guards' view (`walkto 3400 3400`): knocked out within 30 s, then
+  state `Carried` (a guard in "Carrying Body"), after ~20 s `Floating` (thrown out of an airlock into space), after
+  ~50 s more `Resting` and the "Character Select" screen; `global.Mission` gone. No `FailMission` and no
+  `CompleteMission` call on that copy (the assassination was already complete). From the decompile (derived):
+  `PlayerStateUnconscious` calls `SendNearestGuardToSavePlayer` (sets the guard's `MySaviour`/state), the guard carries
+  the body to `NearestAirlock` and ejects it; `PlayerStateFloating` can end in `KillPlayer` (oxygen,
+  `PlayerCanLoseOxygen`) -> `StartDeathZoom`, or a pod scooping the body up (`CanBeScoopedUp`).
+- **The guest knocked out (co-op, before any fix)**: `walkto` into view with `unseen 0`: `Unconscious` within 5 s,
+  injuries 7 -> 10, and then nothing: no guard came for it (the guest's copies of the guards are mirrors and do not
+  act; the host never sends one for the puppet), and the host's guards kept shooting the puppet (hits events 56-65
+  every ~0.7 s, forwarded to the guest). The alarm they raised made the target escape ~35 s later: `FailMission`
+  from `MissionCheckEarlyFailure` on both copies in the same frame (then every frame), both end screens, and the
+  banners "<guest>'s mission failed" on the host and "<host>'s mission failed" on the guest (first failure banners
+  seen).
+- **Misleading banner**: when the host was carried off and thrown out, the guest was shown "<host> left the ship".
+- Not done yet: the host's guards treating an unconscious guest as down (no more shots) and carrying it off; the
+  guest's body following its puppet while carried and thrown out; a banner for a player lost this way.
