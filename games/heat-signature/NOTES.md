@@ -753,6 +753,34 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   paused the game" on the host; the host's sentry spotting the guest showed "You were spotted" on the guest and
   "Tyeesha Prophecy was spotted" on the host.
 
+
+## Leaving the ship and flying home (2026-11-01)
+
+- **How a player leaves** (observed): standing in its docked pod, Use (`InteractWith(<the pod>)`) seats the player
+  (state "Controlling") and the pod undocks. Flying home ends at a station: `oShip_Step_0` calls `DockAtStation` when
+  the pod reaches it, which calls `CompleteMission` (or `FailMission`) on that copy; the mission end screen opens.
+  Test helper `gotohome <distance>` puts the pod that far from `global.HomeStation`, stopped (a pod just off a ship
+  kept its speed and flew past), instead of the flight. Observed: pod 100 units from the station, docked within 5 s,
+  `Completed` 1, end screen open. (A direct `DockAtStation` call had closed the game earlier.)
+- **Three bugs found and fixed** (observed in this order):
+  1. A guest who flew off left its puppet standing in the host's airlock. The host's guards shot it, and those hits
+     reached the guest in its pod and knocked it out into space (state "Floating", injured 1 -> 5). Now a puppet whose
+     player has been aboard the shared ship and is no longer is held there, hidden, its step skipped (its own step had
+     walked it after its player into the station).
+  2. The guest's end screen is a menu, which pauses the game; shared time made it pause the host, still aboard.
+     A copy's own mission end screen is no longer shared: it pauses only that copy, with no banner.
+  3. The host could not dock at home after the guest had: on the host's copy the guest's puppet had walked after its
+     player into the station (Parent = the station) and the puppet pod sat at the station's centre; the host's pod was
+     pushed away (drifted 38 000 units) and never got a docking opportunity. Fix 1 (the puppet held, its step skipped)
+     ended this: the host docked in every later run. A second fix that also moved the puppet pod far away made no
+     difference when switched off (mutation `nostow`: 9/9), so it was removed.
+- **Docking timing** (observed): twice in 5 runs the guest's pod, put 100 units from the station, had not docked 6 s
+  later; put there again it docked (the station may not be ready right after the jump; unknown). The test retries every
+  5 s for up to 20 s.
+- **Not done**: what the other player sees when one player docks home first (only "held, hidden"; no banner yet);
+  a failed mission (a player captured or the pod destroyed); leaving before the objective is done; the real flight
+  (bot steering) instead of `gotohome`.
+
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
 - Whether UndertaleModTool reads a GMS1 data chunk that is embedded in the exe.

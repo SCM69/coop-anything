@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario and a 7-check items scenario on two real game copies (host + 1 guest), with 24 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario and a 9-check flying-home scenario on two real game copies (host + 1 guest), with 26 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-31 |
 
 ## Where things stand
@@ -24,7 +24,8 @@ copies (the other copy's are harmless look-alikes; hits travel separately); afte
 jammer devices are the same on both copies; guards carry the same gear and drop the same items, and an item or loot
 taken off the ship on one copy is gone on the other; a loot box opened on one copy opens on the other (its item is the
 opener's); an item a player drops or throws aboard is the same item on the other copy (name, traits, every value) and
-rests at the same place; alarms, the target's death or escape and the
+rests at the same place; a player who has left the ship in their pod is gone from it on the other copy, and each player's
+mission completes when they dock at home (the end screen pauses only that player); alarms, the target's death or escape and the
 mission's end are the same on both copies. Not done: grenades and hull damage on both copies, a thrown item's hit on a guard (untested), other mission types, guard
 animations on guests, more than one guest, Steam lobbies, an installer.
 
@@ -96,6 +97,12 @@ copied); the host takes it (gone on the guest, in the host's inventory under the
 once it has stopped, both copies have it at the same place (at most 2 units apart, moved at least 5); the guest takes it
 back (gone on the host); no error dialogs; both advancing.
 
+`tools/home.sh` (9 checks): dock; the guest kills the target (done on both); the guest takes its pod's controls and
+leaves (on the host its puppet is hidden and nothing hurts the guest in its pod); the guest flies home (test helper
+`gotohome`: the pod is put next to the home station, stopped, instead of the flight) and its mission completes with the
+end screen open; the guest's end screen does not pause the host, still aboard; the host leaves and flies home and its
+mission completes; no `FailMission`; no error dialogs; both advancing.
+
 `tools/security.sh` (9 checks) raises the alarm on a ship with reinforcements. The random test galaxy may offer
 none, so the shared mission's text gets `ReinforcementProtocol = 2` and `EscapeProtocol = 0` on both copies (test
 helper `MISSION_SET`). Checks: dock; the protocol on both copies; the guest beams in exactly the host's reinforcements;
@@ -103,7 +110,14 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs on the banners build (2026-11-01): suite **28/28 three times in a row** (00:14-00:19 UTC), items 7/7
+Last runs on the flying-home build (2026-11-01): home **9/9 three times in a row** (01:07, 01:09, 01:11 UTC) after
+the test was made to retry the jump next to the station (twice the guest's pod did not dock within 6 s of the jump;
+it did when put there again); suite **28/28 three times in a row** (01:13-01:18); items 7/7, mission 10/10, security 9/9
+(01:00-01:03, before the last change, which only removed code). Suite check 5 failed in 2 of the 10 suite runs since the
+banners build: the hit guard was patrolling ("PatrolPath") instead of at its post and did not react; the check now
+prints the guard's state before the hit; cause unknown.
+
+Runs on the banners build (2026-11-01): suite **28/28 three times in a row** (00:14-00:19 UTC), items 7/7
 (00:23), mission 10/10 (00:25), security 9/9 (00:27). One suite run before those failed check 5: the guest's hit
 reached the host's guard but it did not react (cause not confirmed; a shield on the randomly chosen guard is a guess).
 
@@ -146,6 +160,8 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `noboxes` (box openings not synced), mission scenario | 9 passed, 1 failed | the host's copy opened 0 boxes for the guest |
 | `nodrops` (drops and throws not sent), items scenario | 4 passed, 3 failed | the host shows nothing where the guest dropped its item |
 | `nospotted` (sightings not counted), suite | 27 passed, 1 failed | no "You were spotted" on the guest, none named on the host |
+| `noleave` (a puppet stays after its player left), home scenario | 6 passed, 3 failed | on the host the puppet stayed visible; 17 hits reached the guest in its pod, knocked out into space |
+| `sharedendscreen` (end screen pause shared), home scenario | 7 passed, 2 failed | host time scale 0 while the guest's end screen was open |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 
