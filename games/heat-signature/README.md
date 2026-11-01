@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 12-check flying-home scenario and a 9-check leaving-early scenario on two real game copies (host + 1 guest), with 27 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario and a 9-check leaving-early scenario on two real game copies (host + 1 guest), with 28 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-31 |
 
 ## Where things stand
@@ -97,8 +97,9 @@ copied); the host takes it (gone on the guest, in the host's inventory under the
 once it has stopped, both copies have it at the same place (at most 2 units apart, moved at least 5); the guest takes it
 back (gone on the host); no error dialogs; both advancing.
 
-`tools/home.sh` (12 checks): dock; the guest kills the target (done on both); the guest takes its pod's controls and
-leaves (on the host its puppet is hidden and nothing hurts the guest in its pod); the host is told by name that the
+`tools/home.sh` (13 checks): dock; the guest kills the target (done on both); the guest takes its pod's controls and
+leaves (on the host its puppet is hidden and nothing hurts the guest in its pod); in flight the guest's body (and so
+the camera) stays with its pod; the host is told by name that the
 guest left; the guest flies home (test helper `gotohome`: the pod and the player's body are put next to the home
 station, stopped, instead of the flight) and its mission completes with the end screen open; the host is told; the
 guest's end screen does not pause the host, still aboard; the host leaves and flies home and its mission completes; the
@@ -116,7 +117,10 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs on the mission-end banners build (2026-11-01): home **12/12** and early **9/9** twice each (03:14-03:19 UTC)
+Last runs on the pilot-follows-pod build (2026-11-01): home **13/13** and early **9/9** twice each (04:07-04:12 UTC),
+suite **28/28** (04:17), mission 10/10, items 7/7, security 9/9 (04:18-04:22); `nopilotfollow` caught (04:14).
+
+Runs on the mission-end banners build (2026-11-01): home **12/12** and early **9/9** twice each (03:14-03:19 UTC)
 and once more on the final build (03:32, 03:34); suite **28/28** (03:25), mission 10/10, items 7/7, security 9/9
 (03:26-03:30). Before this build docking at home failed in about half the runs (the player's body stays behind when
 its pod undocks, so the game never offers the home station; see NOTES.md); `gotohome` now moves the body too.
@@ -174,6 +178,7 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `noleave` (a puppet stays after its player left), home scenario | 6 passed, 3 failed | on the host the puppet stayed visible; 17 hits reached the guest in its pod, knocked out into space |
 | `sharedendscreen` (end screen pause shared), home scenario | 7 passed, 2 failed | host time scale 0 while the guest's end screen was open |
 | `nonews` (no banners about the other player), home scenario | 9 passed, 3 failed | no "left the ship" or "mission complete" banner on either copy |
+| `nopilotfollow` (the pilot's body not kept with its pod), home scenario | 12 passed, 1 failed | the guest's body stayed where its pod left the ship |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 

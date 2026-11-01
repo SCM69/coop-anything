@@ -818,7 +818,35 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   "Jigme Cuba left the ship" and "Jigme Cuba: mission complete" once each; the guest shown the host's. A failure
   banner has not been seen (no failure happened).
 - **Not done**: a failed mission (a player captured or the pod destroyed); the real flight (bot steering) instead of
-  `gotohome`; whether real players are left behind at undock (above).
+  `gotohome`.
+
+## The pilot left behind at undock (2026-11-01)
+
+Observed, unless marked:
+- **Real players too**: the bot walked from its pod into the ship and back (`walkto`, with the host's guards told to
+  ignore it), then Use: same result. Its body stayed where the pod left the ship, the camera with it; a screenshot
+  showed empty space while the pod flew off. So this is not a test-placement artefact.
+- **Frame by frame** (a per-frame watch of Parent, state and camera object): Use calls `InteractWith(<pod>)` (no
+  `SitIn`, no Parent change); on the next frame the pod's `PlayerShipStateDocked` calls `UndockAtSpeedAndAngle`
+  (`ContentsToMoveCount` 1: the player); the player's `Parent` becomes itself while still "Free", then "Floating",
+  then "Controlling". The camera's `Object` stays the player throughout.
+- **Why the body stays**: the undock removes the player from the ship's contents and calls
+  `AddToPlayerShipsContents(player)`, which skips `global.Player` (decompile: it compares the id with global.Player
+  and jumps past the re-parenting; observed: Parent stays itself after the call, with global.Player and
+  global.PlayerShip correct). With no Parent, `UpdatePosition` moves the player by its own `xSpeed`/`ySpeed`
+  (`UpdateSpacePosition`), which are 0. The carry test itself passes (inside the pod's bounds 0x637-0x63a, no module
+  at that spot; test helper `carrycheck`).
+- **Unknown**: what keeps the pilot with its pod in the unmodded game. The game's own `UndockFromStation` gives the
+  same "Controlling, Parent = itself" state; pushing that pod by its speed left the body behind too, but that pod was
+  still tied to the station (clamped at x 100000), so the check is not conclusive. Bot thrust (control 5 held) did not
+  move it.
+- **Fix**: while my player is at the controls of its own pod, the player's Parent is itself and the pod is free in
+  space, the player's x/y (and xReal/yReal) are set to the pod's each frame. Observed: distance 0 in flight, the
+  screenshot shows the pod centred. `gotohome` no longer moves the body. Mutation `nopilotfollow`.
+- Side finding: on the host's copy, the host's own player was missing from its ship's `Contents` list (helper
+  `incontents`); effect unknown.
+- Side finding: walking into the shared ship without `unseen`, the guest was knocked out by 38 hits from the host's
+  copy right inside the airlock (a guard or sentry there; likely normal play, not investigated).
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.
