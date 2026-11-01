@@ -340,8 +340,8 @@ Derived (design consequence):
 - **Host guards notice guests** (observed, first test): on the host, each shared-ship guard's step runs with
   `global.Player` = the nearest player aboard the same ship (the host's own player or a guest's puppet). After the guest
   walked toward guards, the host had 2 guards "Panicking" and 2 "Searching" (none in earlier runs), and the host's game
-  ran its "spotted" pause, which the shared time sent to the guest ("Paused by the host"). To do: the spotted pause and
-  zoom should happen on the spotted player's screen (a guest), not as the host's own pause.
+  ran a pause, which the shared time sent to the guest ("Paused by the host"). Correction (2026-11-01): it was not a
+  "spotted" pause. In this build no spotting changes time (see "Banners with names" below); which pause it was is unknown.
 - **Guests' hits reach the host** (observed): a hit is put on its target with `SetDamageSignal(target id, damage mask)`
   (`0x005d0050`, sets `DamageSignal` 0x400 / `DamageMask` 0x401 inside `with(target)`); the guard handles it in its step
   (`EnemyHandleDamageSignal`). On a guest the hooked function also sends the hit (guard's original position + mask,
@@ -734,6 +734,24 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
   switch has no check that can fail); a guest's thrown item does not distract the host's guards (its bounce sound plays
   only on the guest's copy); armed traps not tested (`Armed` is copied, so a shown trap may go off on both copies: unknown); an item that leaves
   the shared ship (thrown out of an airlock) is not followed; items dropped in space or on another ship.
+
+
+## Banners with names (2026-11-01)
+
+- **No spotted slow-down in this build** (decompiled): guards chasing or confronting a player and sentries shooting at
+  one call `SetTimeScale(oTime.SlowMoScale, oTime.EnemyTargetPriority, 1)`; `oTime_Create_0` sets
+  `EnemyTargetPriority` (0x3e9) to 0 and nothing else writes it, so the request never applies (observed: about 10000 such
+  calls at 0.2/0 in one suite run, time unchanged). The game itself shows nothing when a player is spotted.
+- **Spotted banner** (new, the owner's request): a sighting adds to the player's `TimesSeen` (0x2cb). The host's guards
+  decide sightings (a guest's copies see nobody), so the host watches `TimesSeen` of its player and of the puppet and
+  sends both counts in its player packet; each copy shows "You were spotted" or "<name> was spotted" when a count grows,
+  at most once per 10 s per player.
+- **Names**: each player packet carries the sender's character `Name` (0x2a1); pause banners read "You paused the game"
+  or "<name> paused the game" ("Your partner"/"The host" until a name arrives). Steam names can replace character names
+  once lobbies exist.
+- **Observed**: suite check 4d3, the guest's pause showed "You paused the game" on the guest and "<guest's character>
+  paused the game" on the host; the host's sentry spotting the guest showed "You were spotted" on the guest and
+  "Tyeesha Prophecy was spotted" on the host.
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.

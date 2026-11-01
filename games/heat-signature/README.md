@@ -5,14 +5,15 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 27-check suite, a 10-check mission scenario, a 9-check security scenario and a 7-check items scenario on two real game copies (host + 1 guest), with 23 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario and a 7-check items scenario on two real game copies (host + 1 guest), with 24 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-31 |
 
 ## Where things stand
 
 Nobody can play Heat Signature together yet, but the core pieces of a co-op mod for up to 4 players run between two
 game copies on one PC (localhost UDP, headless test displays). Working and tested with bot input: each player sees the
-other as a puppet character or pod; shared pause, slow motion and fast-forward with a "paused by" banner; the host's
+other as a puppet character or pod; shared pause, slow motion and fast-forward with a banner naming who paused, and a "<name> was spotted" banner on both
+screens; the host's
 mission and its ship are rebuilt identically on the guest from the mission text plus a seed; pods fly together in
 space (with an optional "follow the host" mode) and both players can board the shared ship; doors and guard positions
 are synced from the host; the host's guards notice guests, a guest's hits reach the host's guards, and guards' hits on
@@ -69,7 +70,8 @@ puppets parked while their players stand in their pods; guest pause, guest unpau
 host fast-forward alone refused; fast-forward when both ask; the parked guest left alone by the host's guards; the
 guest walks from its pod toward a room behind a security-2 door: with a level-1 card it and its puppet on the host stop
 at the door, with a level-2 card both go through; walking on into a sentry's view, the host's sentry shoots the
-guest's puppet and the guest is hurt while the guest's own sentries hold fire; the guest sees the host's bullets as
+guest's puppet and the guest is hurt while the guest's own sentries hold fire; the guest's pause and the guest being spotted show
+banners with the guest's name on the host ("You ..." on the guest); the guest sees the host's bullets as
 look-alikes that hurt nobody (every hit on the guest came from the host); the guest's witnesses and times seen
 equal the host's count for its puppet, with none counted by the guest's copy; a guest's hit reaches the same guard on the host, which reacts, and a
 knockout shows on the guest; keycard clearance reaches the puppet; a hit on the guest's puppet hurts the guest, not the
@@ -101,7 +103,11 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs on the drops build (2026-10-31): items **7/7 three times in a row** (23:07, 23:09, 23:10 UTC); suite 27/27
+Last runs on the banners build (2026-11-01): suite **28/28 three times in a row** (00:14-00:19 UTC), items 7/7
+(00:23), mission 10/10 (00:25), security 9/9 (00:27). One suite run before those failed check 5: the guest's hit
+reached the host's guard but it did not react (cause not confirmed; a shield on the randomly chosen guard is a guess).
+
+Runs on the drops build (2026-10-31): items **7/7 three times in a row** (23:07, 23:09, 23:10 UTC); suite 27/27
 (22:58), mission 10/10 (22:59), security 9/9 (23:02). Earlier items runs failed on the test's own bars: two throws hit
 something after 13-15 units (the check wanted 20; both copies agreed), and one item held a value that looked like an
 instance id on one copy only (now counted with the numbers).
@@ -139,6 +145,7 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `notaken` (taking not sent), mission scenario | 8 passed, 1 failed | guest sent 0; host contents 77, guest 75 |
 | `noboxes` (box openings not synced), mission scenario | 9 passed, 1 failed | the host's copy opened 0 boxes for the guest |
 | `nodrops` (drops and throws not sent), items scenario | 4 passed, 3 failed | the host shows nothing where the guest dropped its item |
+| `nospotted` (sightings not counted), suite | 27 passed, 1 failed | no "You were spotted" on the guest, none named on the host |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 
@@ -155,7 +162,6 @@ Not applicable yet.
 
 ## Next steps
 
-- Grenades, explosions and hull damage on every copy; other mission types and docking home; spotted pause/zoom on the
-  spotted player's screen; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship.
+- Grenades, explosions and hull damage on every copy; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.
