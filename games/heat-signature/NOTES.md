@@ -871,5 +871,53 @@ Observed, unless marked:
   banners "<guest>'s mission failed" on the host and "<host>'s mission failed" on the guest (first failure banners
   seen).
 - **Misleading banner**: when the host was carried off and thrown out, the guest was shown "<host> left the ship".
-- Not done yet: the host's guards treating an unconscious guest as down (no more shots) and carrying it off; the
-  guest's body following its puppet while carried and thrown out; a banner for a player lost this way.
+- **Unmodded throw-out, in detail** (observed on the host, hooks on `EjectContentsFromAirlock`): the guard carries the
+  body to its `DestinationAirlock` ("Fetching Body" -> "Carrying Body" -> "Leaving Body"); 0.8 s after it lays it down,
+  `oAirlock_Step_0` calls `EjectContentsFromAirlock(<player id>, <airlock id>, 5000, <direction ~ the airlock's
+  image_angle>)` with self = the airlock; a puppet standing in the same airlock went out in the same step. The airlock
+  was not docked (`DockedState` 0) and its doors did not cycle. What starts the throw looks at `global.Player` only
+  (unknown how): running the airlock's step with the puppet as `global.Player` threw nothing out.
+- **Fixed, the knocked-out guest** (all observed in `fail.sh`, see below):
+  1. The host's puppet goes "Unconscious" when the guest does (`ChangeStateTo`); while the guest stays down the puppet
+     stays down (`SecondsUntilGetUp` held), and gets up with it. The guards stop shooting it.
+  2. The guard sent for it (the puppet's `MySaviour`) keeps the puppet as `global.Player` during its step. Before, the
+     host's own player standing nearer made the guard take the host as the body it carried; it put the puppet down
+     ("Leaving Body" after 14.5 s every time).
+  3. A guest knocked out in the airlock beside its docked pod no longer counts as "in its pod": that parked (hid) the
+     puppet, and the guard lost the body.
+  4. 0.8 s after the guard lays the puppet in an airlock, the host makes the same `EjectContentsFromAirlock` call for it,
+     and does not board it onto the ship again until its player follows.
+  5. The guest's copy follows its puppet (packet fields `body`, `body_fore/star`, `body_dx/dy/vx/vy`): held down while
+     carried (positioned where the guard carries it), and when the puppet is thrown out, out of the ship at the same
+     offset and speed, state "Floating"; from there its own copy runs the rest. Observed: oxygen ran out after ~50 s,
+     "Death Zoom", then the character select, as for the host's own player unmodded.
+  6. The guest's copy sends none of its own guards for its player (`SendNearestGuardToSavePlayer` dropped there): one
+     of them (a guard the host had not reported lately runs its own step) had carried the guest off and thrown it out
+     on the guest's copy alone, while on the host the puppet lay in the airlock.
+  7. Banners: "<name> was thrown out of an airlock" (instead of "left the ship") and "<name> was lost in space".
+- **A death crashed the game in co-op, host and guest alike** (observed, also with no knockout involved: the host's own
+  player thrown out and lost): "Reached SwitchToCharacterSelect and no chooseable players exist, must have failed to
+  generate choices". Cause, observed by an A/B run: `StartANewLife` builds the chosen station anew (new characters to
+  choose) only if `station.MyBuilding` does not exist; with a puppet (made from one of our roster characters by
+  `PlayAsCharacter`), the home station's building was still there after our player left (without a puppet, `NOPUPPET=A`,
+  it was gone and the select worked), while its characters were gone. Why the building outlives the departure with a
+  puppet: unknown (moving the puppet out of the building right after the undock did not change it). Fix: during a new life (after `EndLife`),
+  if the station `GetRandomStationOfFactionWithNoClient` returns has a building with no character to choose in it, the
+  mod removes it with `DestroyShip` (as `oStation_Destroy` does; `DestroyInstance` raised "Destroying a ship without
+  destroying its contents first"). Observed: four new characters, the select open, no dialog.
+- **Notes for tests**: a knockout made by the test helper alone (`knockout`, `ChangeStateTo` + `KnockOutTime`) brought no
+  guard, even with the puppet's `SecondsSinceSeen` set to 0 (the game sends one only to a player its guards are onto,
+  exact rule unknown); `fail.sh` lets the host's guards knock the guest out for real. Walking the guest through the
+  ship with the guards watching raised the alarm and the target escaped: both missions failed early (`fail.sh` kills
+  the target first). With the target dead, the lost player's mission ends without `FailMission` (observed, host and
+  guest).
+- **Later runs** (observed): once in 7 runs the guest, thrown out beside the airlock its own pod was docked at, was at
+  that pod's controls a moment later (state "Controlling", off the ship): picked up by its pod (cause not checked; the
+  game has `CanBeScoopedUp`). A pod undocking puts its pilot in "Floating" for a frame, so "thrown out" is now named only
+  for a player who was down before it floated. In the suite, the host's guards now knock the walking guest out and
+  carry it off as the game does (the sentry then holds fire at the downed puppet, and a down player takes no hits:
+  `PlayerStateUnconscious` handles no damage); two suite checks were changed to accept that. A hit on the guest made it
+  drop a grenade (`PlayerHandleDamageSignal` -> `CreateContentsOnTopOf`) whose blast hurt it on its own copy; grenades
+  are not synced yet, so such blasts are counted apart from hits not from the host.
+- Not done: rescuing a floating player (its own pod, or the other player's), picking a new character after a death
+  and joining again, a pod destroyed; a test that reaches the cases of `noguestsave` and `nodownpod`.

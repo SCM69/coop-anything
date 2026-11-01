@@ -5,8 +5,8 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario and a 9-check leaving-early scenario on two real game copies (host + 1 guest), with 28 mutation runs; nothing tested with more than one guest or over Steam yet |
-| Last updated | 2026-10-31 |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 13-check flying-home scenario, a 9-check leaving-early scenario and an 11-check knocked-out scenario on two real game copies (host + 1 guest), with 35 mutation runs; nothing tested with more than one guest or over Steam yet |
+| Last updated | 2026-11-01 |
 
 ## Where things stand
 
@@ -25,7 +25,9 @@ jammer devices are the same on both copies; guards carry the same gear and drop 
 taken off the ship on one copy is gone on the other; a loot box opened on one copy opens on the other (its item is the
 opener's); an item a player drops or throws aboard is the same item on the other copy (name, traits, every value) and
 rests at the same place; a player who has left the ship in their pod is gone from it on the other copy, and each player's
-mission completes when they dock at home (the end screen pauses only that player); alarms, the target's death or escape and the
+mission completes when they dock at home (the end screen pauses only that player); a guest knocked out aboard is
+carried off by the host's guards and thrown out of an airlock on both copies, then floats until it is lost, as the
+game does with its own player, and a death no longer crashes the game; alarms, the target's death or escape and the
 mission's end are the same on both copies. Not done: grenades and hull damage on both copies, a thrown item's hit on a guard (untested), other mission types, guard
 animations on guests, more than one guest, Steam lobbies, an installer.
 
@@ -105,6 +107,13 @@ station, stopped, instead of the flight) and its mission completes with the end 
 guest's end screen does not pause the host, still aboard; the host leaves and flies home and its mission completes; the
 guest is told both; no `FailMission`; no error dialogs; both advancing.
 
+`tools/fail.sh` (11 checks): dock; the target is killed first (an alarm would let it escape and end both missions);
+a short knockout: the host's puppet goes down with the guest and both get up together; the host's guards knock the
+guest out for real: a guard carries its puppet off on the host while the guest's copy holds it down; the host throws
+the puppet out of the airlock and the guest floats in space; the guards did not shoot the knocked-out guest; the host
+is told the guest was thrown out (not that it left); the guest's oxygen runs out and it is lost (character select,
+no error dialog); the host is told; the host's mission goes on; no error dialogs; both advancing.
+
 `tools/early.sh` (9 checks): dock; the guest leaves at once and flies home with the target alive: it docks and its
 mission stays open (not failed: the game's own rule); the host is told it left, nothing more; the host's mission goes
 on, unpaused; the host kills the target alone, which completes the guest's mission at home, and the host is told; the
@@ -117,37 +126,15 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs on the pilot-follows-pod build (2026-11-01): home **13/13** and early **9/9** twice each (04:07-04:12 UTC),
-suite **28/28** (04:17), mission 10/10, items 7/7, security 9/9 (04:18-04:22); `nopilotfollow` caught (04:14).
+Last runs, on the knockout build (2026-11-01, core 86c9d6a7): suite **28/28 twice** (16:04, 16:07 UTC), knocked-out
+scenario 11/11 (16:10), home 13/13, early 9/9, mission 10/10, items 7/7, security 9/9 (16:12-16:18). On the builds
+just before: knocked-out scenario 11/11 in 6 of 7 runs (the other: the guest was picked up by its own pod at once, now an
+accepted ending), suite check 4d2 failed in 3 of 5 runs (one hit on the guest from its own copy: once a blast of the
+guest's own grenade, now counted apart; once a bullet, cause unknown; once not examined), suite check 5 failed once (a
+patrolling guard that did not react to the guest's hit, a known flake). Earlier
+runs are in the history of this file.
 
-Runs on the mission-end banners build (2026-11-01): home **12/12** and early **9/9** twice each (03:14-03:19 UTC)
-and once more on the final build (03:32, 03:34); suite **28/28** (03:25), mission 10/10, items 7/7, security 9/9
-(03:26-03:30). Before this build docking at home failed in about half the runs (the player's body stays behind when
-its pod undocks, so the game never offers the home station; see NOTES.md); `gotohome` now moves the body too.
-
-Runs on the flying-home build (2026-11-01): home **9/9 three times in a row** (01:07, 01:09, 01:11 UTC) after
-the test was made to retry the jump next to the station (twice the guest's pod did not dock within 6 s of the jump;
-it did when put there again); suite **28/28 three times in a row** (01:13-01:18); items 7/7, mission 10/10, security 9/9
-(01:00-01:03, before the last change, which only removed code). Suite check 5 failed in 2 of the 10 suite runs since the
-banners build: the hit guard was patrolling ("PatrolPath") instead of at its post and did not react; the check now
-prints the guard's state before the hit; cause unknown.
-
-Runs on the banners build (2026-11-01): suite **28/28 three times in a row** (00:14-00:19 UTC), items 7/7
-(00:23), mission 10/10 (00:25), security 9/9 (00:27). One suite run before those failed check 5: the guest's hit
-reached the host's guard but it did not react (cause not confirmed; a shield on the randomly chosen guard is a guess).
-
-Runs on the drops build (2026-10-31): items **7/7 three times in a row** (23:07, 23:09, 23:10 UTC); suite 27/27
-(22:58), mission 10/10 (22:59), security 9/9 (23:02). Earlier items runs failed on the test's own bars: two throws hit
-something after 13-15 units (the check wanted 20; both copies agreed), and one item held a value that looked like an
-instance id on one copy only (now counted with the numbers).
-
-Earlier runs (2026-10-31, the loot box build): suite **27/27 four times in a row** (20:26-20:34 UTC); mission scenario **10/10
-three times in a row** (21:03, 21:04, 21:06); suite 27/27 and security 9/9 again on that build (21:10, 21:12); security scenario 9/9 (20:04; three in a row at 18:39-19:00 on the build
-before the gear change). Earlier suite runs on this build failed once each: the host's guards raised the alarm during
-the sentry walk (exposure since cut from 3 s to 1 s), and once one hit on the guest came from its own copy (not seen
-again in 8 runs; cause unknown).
-
-Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check. The suite ones ran
+Mutation runs (`COOP_MUTATION=<name>` breaks one feature in the core), each caught by its own check unless marked. The suite ones ran
 against the 14:32 build, before the 27th check (`nopuppethits` and `mirrorsees` were re-run on the 15:30 build with the
 same result; `noghosts` and `ghosthurts` ran on the final build):
 
@@ -179,6 +166,12 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `sharedendscreen` (end screen pause shared), home scenario | 7 passed, 2 failed | host time scale 0 while the guest's end screen was open |
 | `nonews` (no banners about the other player), home scenario | 9 passed, 3 failed | no "left the ship" or "mission complete" banner on either copy |
 | `nopilotfollow` (the pilot's body not kept with its pod), home scenario | 12 passed, 1 failed | the guest's body stayed where its pod left the ship |
+| `nodown` (the puppet stays up when the guest is knocked out), fail scenario | 4 passed, 7 failed | 31 hits on the knocked-out guest; no guard carried it |
+| `nosaviour` (the carrying guard looks at the nearest player), fail scenario | 7 passed, 4 failed | the puppet was not thrown out; the guest stayed aboard |
+| `nobody` (the guest's copy does not follow its body), fail scenario | 5 passed, 6 failed | the host threw the puppet out 10 times; the guest stayed aboard |
+| `noeject` (the host does not throw the puppet out), fail scenario | 7 passed, 4 failed | the puppet lay in the airlock until it got up |
+| `nonewlife` (no stale building removed at a new life), fail scenario | 10 passed, 1 failed | "no chooseable players exist" dialog on the guest |
+| `noguestsave`, `nodownpod`, fail scenario | 11 passed each | not caught: the scenario does not reach those cases (see NOTES.md) |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 
@@ -195,6 +188,6 @@ Not applicable yet.
 
 ## Next steps
 
-- Grenades, explosions and hull damage on every copy; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship.
+- Grenades, explosions and hull damage on every copy; other mission types and docking home; guard states and animations on guests; a thrown item's hit on a guard; armed traps; items thrown off the ship; rescuing a floating player, a new character after a death, a pod destroyed.
 - Up to 3 guests, Steam lobbies and invites, mission sharing from the game's own menus.
 - Suite with 3 and 4 copies, then an installer.
