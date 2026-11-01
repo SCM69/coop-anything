@@ -776,10 +776,49 @@ Blocker (unexplained, 2026-10-30 from about 14:40 local time):
      difference when switched off (mutation `nostow`: 9/9), so it was removed.
 - **Docking timing** (observed): twice in 5 runs the guest's pod, put 100 units from the station, had not docked 6 s
   later; put there again it docked (the station may not be ready right after the jump; unknown). The test retries every
-  5 s for up to 20 s.
-- **Not done**: what the other player sees when one player docks home first (only "held, hidden"; no banner yet);
-  a failed mission (a player captured or the pod destroyed); leaving before the objective is done; the real flight
-  (bot steering) instead of `gotohome`.
+  5 s for up to 20 s. *Superseded, see "Docking at home, corrected" below.*
+
+## Docking at home, corrected; banners for the other player; leaving early (2026-11-01)
+
+- **Docking at home failed in about half the runs** (observed: host in 3 of 4 runs, guest in 1, after 20 s of retries).
+  Investigation (observed unless marked):
+  - The bot's pod was pushed west at exactly 450 units/s right after `gotohome 100`. The station's `Radius` is 3976,
+    so 100 (and the old default 3000) is inside its hull; placed 1500 out and drifting in, the pod bounced off about
+    600 units from the centre. Not a docking path either way.
+  - `PlayerShipIsAllowedToDockAtStation` (0x00af6320, hooked and logged) was never called. The flying state's dock
+    check uses the pod's `NearestStation` (0x83b), which named a station of another faction 820 000 units away; the
+    home station, about 30 000 units away, was not a candidate.
+  - `ControlSomething` finds the nearest station from the **player's** x/y, and oGalaxy activates the galaxy around
+    the camera's sector (`ActivateNearbyGalaxyElements`; derived from the decompile). The camera follows the player.
+    After Use in a docked pod and the undock, the player (state "Controlling", `Controlling` = the pod) has
+    `Parent` = itself and its x/y **stay where the pod left the ship**: observed over 6 s, the body did not move while
+    the pod flew 100 000 units. So the camera stayed at the mission ship, the home station was not activated, and the
+    pod could not dock unless the mission ship happened to be near home (which explains the flaky passes).
+  - Test fix: `gotohome` also puts the player's body at the pod. With it the pod docked within 2 s.
+  - **Unknown, important**: whether a real player is left behind too, or only the bot. The bot is placed in its pod by
+    `dockship` (the game's `DockWithAirlock`) and never walks in; undocking (`UndockAtSpeedAndAngle`) moves the ship's
+    `Contents` that lie in the pod's footprint to the pod, so a player missing from the ship's `Contents` list would be
+    left behind (guess). A walk-in test (`walkto` out and back, then Use) did not seat the bot. Needs a check by a
+    walking bot before anyone flies home for real.
+- **Correction to bug 3 above**: the host's pod "pushed away" was the station's hull pushing out a pod put inside it,
+  and the host not docking was the body left behind. Putting the guest's puppet pod far away was tried again
+  (mutation `nostow`) and again made no difference (home 12/12 with it switched off), so it is not in the mod. On the
+  host's copy the guest's puppet pod may still sit at the home station after the guest docks (cosmetic, not checked).
+- **Leaving early does not fail the mission** (observed): the guest flew home with the target alive; it docked
+  (state "Free" at the station), `Completed` 0 and no `FailMission`. When the host later killed the target, the
+  guest's `CheckIfAssassinationMissionCompleted` (run from `PlayerStateFree`) completed the guest's mission at home.
+  `FailMission` is called from `DockAtStation`, `MissionCheckEarlyFailure`, `StartDeathZoom`, objective-delivery
+  scripts (decompile); none of them fired here.
+- **`CompleteMission` repeats** (observed): once the mission is complete the game calls it every second
+  (`CheckIfAssassinationMissionCompleted` from the player's step), so a call count is no "just docked" signal.
+- **Banners for the other player** (new): each player packet carries the last mission that ended on the sender's copy
+  and how (`CompleteMission`/`FailMission` argument and kind). The other copy shows "<name> left the ship" when the
+  sender's puppet starts being held (it had been aboard and no longer is), "<name>: mission complete" or
+  "<name>'s mission failed" when the pair changes (not the first one seen after joining). Observed: host shown
+  "Jigme Cuba left the ship" and "Jigme Cuba: mission complete" once each; the guest shown the host's. A failure
+  banner has not been seen (no failure happened).
+- **Not done**: a failed mission (a player captured or the pod destroyed); the real flight (bot steering) instead of
+  `gotohome`; whether real players are left behind at undock (above).
 
 ## Unknown
 - How the Nexus mod loader works and whether it can host networking code.

@@ -5,7 +5,7 @@
 | Engine | GameMaker: Studio 1.4 (engine 1.4.1804), compiled with **YYC**; 32-bit; the data chunk (`FORM`/`GEN8`) is embedded in `Heat_Signature.exe`, there is no `data.win` |
 | Versions tested | Steam app 268130, build 6124596 (in-game 2021.1.20.1), Windows build run under Proton Experimental on Linux. `Heat_Signature.exe` SHA-256 `a5f8befe28786206ed1e2a52385051049524fea51e9e80660e3115e7126274d2` |
 | Projects | from-zero mod in progress (claim: issue 274); code in a separate repo, not published yet |
-| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario and a 9-check flying-home scenario on two real game copies (host + 1 guest), with 26 mutation runs; nothing tested with more than one guest or over Steam yet |
+| QA level | automated: 28-check suite, a 10-check mission scenario, a 9-check security scenario, a 7-check items scenario, a 12-check flying-home scenario and a 9-check leaving-early scenario on two real game copies (host + 1 guest), with 27 mutation runs; nothing tested with more than one guest or over Steam yet |
 | Last updated | 2026-10-31 |
 
 ## Where things stand
@@ -97,11 +97,17 @@ copied); the host takes it (gone on the guest, in the host's inventory under the
 once it has stopped, both copies have it at the same place (at most 2 units apart, moved at least 5); the guest takes it
 back (gone on the host); no error dialogs; both advancing.
 
-`tools/home.sh` (9 checks): dock; the guest kills the target (done on both); the guest takes its pod's controls and
-leaves (on the host its puppet is hidden and nothing hurts the guest in its pod); the guest flies home (test helper
-`gotohome`: the pod is put next to the home station, stopped, instead of the flight) and its mission completes with the
-end screen open; the guest's end screen does not pause the host, still aboard; the host leaves and flies home and its
-mission completes; no `FailMission`; no error dialogs; both advancing.
+`tools/home.sh` (12 checks): dock; the guest kills the target (done on both); the guest takes its pod's controls and
+leaves (on the host its puppet is hidden and nothing hurts the guest in its pod); the host is told by name that the
+guest left; the guest flies home (test helper `gotohome`: the pod and the player's body are put next to the home
+station, stopped, instead of the flight) and its mission completes with the end screen open; the host is told; the
+guest's end screen does not pause the host, still aboard; the host leaves and flies home and its mission completes; the
+guest is told both; no `FailMission`; no error dialogs; both advancing.
+
+`tools/early.sh` (9 checks): dock; the guest leaves at once and flies home with the target alive: it docks and its
+mission stays open (not failed: the game's own rule); the host is told it left, nothing more; the host's mission goes
+on, unpaused; the host kills the target alone, which completes the guest's mission at home, and the host is told; the
+host flies home and its mission completes; the guest is told; no error dialogs; both advancing.
 
 `tools/security.sh` (9 checks) raises the alarm on a ship with reinforcements. The random test galaxy may offer
 none, so the shared mission's text gets `ReinforcementProtocol = 2` and `EscapeProtocol = 0` on both copies (test
@@ -110,7 +116,12 @@ the same reinforcements (tag, name, mercenary type), all mirrored on the guest; 
 same places (`PositionIsScrambled` at every device and at the airlock); a device the guest destroys goes on the host
 too; no error dialogs; both advancing.
 
-Last runs on the flying-home build (2026-11-01): home **9/9 three times in a row** (01:07, 01:09, 01:11 UTC) after
+Last runs on the mission-end banners build (2026-11-01): home **12/12** and early **9/9** twice each (03:14-03:19 UTC)
+and once more on the final build (03:32, 03:34); suite **28/28** (03:25), mission 10/10, items 7/7, security 9/9
+(03:26-03:30). Before this build docking at home failed in about half the runs (the player's body stays behind when
+its pod undocks, so the game never offers the home station; see NOTES.md); `gotohome` now moves the body too.
+
+Runs on the flying-home build (2026-11-01): home **9/9 three times in a row** (01:07, 01:09, 01:11 UTC) after
 the test was made to retry the jump next to the station (twice the guest's pod did not dock within 6 s of the jump;
 it did when put there again); suite **28/28 three times in a row** (01:13-01:18); items 7/7, mission 10/10, security 9/9
 (01:00-01:03, before the last change, which only removed code). Suite check 5 failed in 2 of the 10 suite runs since the
@@ -162,6 +173,7 @@ same result; `noghosts` and `ghosthurts` ran on the final build):
 | `nospotted` (sightings not counted), suite | 27 passed, 1 failed | no "You were spotted" on the guest, none named on the host |
 | `noleave` (a puppet stays after its player left), home scenario | 6 passed, 3 failed | on the host the puppet stayed visible; 17 hits reached the guest in its pod, knocked out into space |
 | `sharedendscreen` (end screen pause shared), home scenario | 7 passed, 2 failed | host time scale 0 while the guest's end screen was open |
+| `nonews` (no banners about the other player), home scenario | 9 passed, 3 failed | no "left the ship" or "mission complete" banner on either copy |
 | `nohits`, mission scenario | 6 passed, 1 failed | host's AssassinationCompleted 0 (the guest's copy killed its own target) |
 | `noguards`, mission scenario | 6 passed, 1 failed | guest's AssassinationCompleted 0 |
 
