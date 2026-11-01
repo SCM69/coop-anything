@@ -980,9 +980,37 @@ Observed:
   its next step: the same objects in its place on both copies. Mutation `nobreach`.
 - **Blown out**: the guest standing next to a window the host's copy broke was pulled out through it on its own copy
   (state "Floating", flying off fast), as the game does to anyone at a broken window. The host's banner said "left the
-  ship"; now "... was blown out of a broken window" when the other player starts floating within 3 s of a window
-  breaking. Mutation `noblownnews`.
+  ship"; now "... was blown out into space" when the other player starts floating within 3 s of a window breaking (or,
+  since the next section, a module going). Mutation `noblownnews`.
 - **Test** (`tools/breach.sh`, 8 checks): windows are broken with `BurstOverride` (helper `breakwin`), because the
   bot cannot aim a gun or throw a grenade yet; a break by a real shot or blast is not tested.
-- Not covered: a copy that was not running when the glass broke (a hot reload) never reports it; modules destroyed by
-  explosions (`DestroyModule`, `SplitShip`) are not synced yet, and grenades wait for them.
+- Not covered: a copy that was not running when the glass broke (a hot reload) never reports it.
+
+## Modules destroyed by explosions (2026-11-01)
+
+Derived from the decompile:
+- `DestroyModule(module, name)` (called by `ExplodeOnShip`, missiles, `BlastDestroyModule`,
+  `DestroyAllModulesInBlastRadius`) works `with (module.Parent)`, skips a station, and then: alarm, screen shake, an
+  explosion in space, the ship's `ModuleGrid` and `DestroyedModule`, turrets and thrusters, `CreateBreachForcefield`,
+  the player's pod undocked if its airlock went (`UndockAtSpeedAndAngle`, `PlayerReturnToShip`), `SplitShip`, and the
+  module destroyed. `DestroyMultipleModules` has its own copy of that code (it does not call `DestroyModule`).
+- `ModuleAt(fore, starboard, ship)` finds a module from the ship's grid (`ModulesLong`, `ModulesWide`, `ModuleLength`,
+  `ModuleWidth`).
+
+Observed:
+- The mod first called `DestroyModule` and nothing happened: the game's own `Exists` said no for a module that was
+  there. Modules and contents away from the players are deactivated; `ExplodeOnShip` calls `ActivateMyModules` and
+  `ActivateMyContents` first, and with those calls it worked.
+- **Fix**, as for windows: each copy tracks the shared ship's modules (its `ModuleList`) by ship-wise position and sends
+  every one it has seen destroyed (both directions); the other copy activates the ship's modules and contents and runs
+  `DestroyModule` on its module at that position. A part cut off from the ship splits off the same way on both copies
+  (the end module of an arm, held only by the destroyed one, went on both). Mutation `nomodloss`.
+- A guest standing in a module whose neighbour the host's copy destroyed was blown out on its own copy ("Floating"), and
+  the host was told "... was blown out into space".
+- Game rules seen on the way (the same on both copies, nothing to sync): a test blast that took the assassination
+  target with it failed the mission at once (`MissionCheckEarlyFailure`: the target no longer exists); destroying the
+  module whose airlock held the guest's pod undocked the pod with the guest at its controls.
+- **Test** (`tools/modloss.sh`, 9 checks): modules are destroyed by the helper `blastmod` (the game's `DestroyModule`),
+  not by a real explosion; positions are those of the fixed test ship. Its walk to the window module found no path once
+  other modules were gone, so the blow-out check runs first.
+- Not covered: grenades themselves (the explosion, damage to people) are still not shown on the other copy.
